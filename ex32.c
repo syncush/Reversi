@@ -370,6 +370,8 @@ int IsValidInput(char *inp) {
  * @return 0 if continue , 1 for player won , -1 if enemy won. 2 tie
  */
 int IsGameOver(int player) {
+    int enemyPiecesCount = PiecesCount(GetEnemy(player));
+    int myPiecesCount = PiecesCount(player);
     int row, col;
     int flagFull = 1;
     for (row = 0; row < BOARDSIZE; row++) {
@@ -378,18 +380,6 @@ int IsGameOver(int player) {
                 flagFull = 0;
                 break;
             }
-        }
-    }
-    if (flagFull) {
-        int enemyPiecesCount = PiecesCount(GetEnemy(player));
-        int myPiecesCount = PiecesCount(player);
-        if (enemyPiecesCount > myPiecesCount) {
-            return -1;
-        } else if (myPiecesCount > enemyPiecesCount) {
-            return 1;
-
-        } else {
-            return 2;
         }
     }
     int isAllBlack = 1;
@@ -419,8 +409,7 @@ int IsGameOver(int player) {
             return 1;
         }
     }
-    return 0;
-    /**
+   // return 0;
     PlayerMove tempMovement;
     tempMovement.player = GetEnemy(player);
     for (row = 0; row < BOARDSIZE; row++) {
@@ -432,12 +421,17 @@ int IsGameOver(int player) {
                 if (flag) {
                     return 0;
                 }
-
             }
         }
     }
-     **/
+        if (enemyPiecesCount > myPiecesCount) {
+            return -1;
+        } else if (myPiecesCount > enemyPiecesCount) {
+            return 1;
 
+        } else {
+            return 2;
+        }
 }
 
 /**
