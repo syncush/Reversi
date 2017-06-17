@@ -20,6 +20,10 @@
 
 #define BOARDSIZE 8
 #define KILOBYTE 1024
+#define BLACK_POWER "Winning player: Black\n"
+#define WHITE_POWER_KKK "Winning player: White\n"
+#define TIE "No winning player\n"
+
 char fifoID[1024] = {0};
 int gameBoard[BOARDSIZE][BOARDSIZE] = {{0}};
 int memSizeOfBoard;
@@ -145,6 +149,16 @@ int main() {
     kill(secondGivenPid, SIGUSR1);
     while(dataPointer[8] == 0) {
         sleep(2);
+
+    }
+    if(dataPointer[8] == 'w') {
+        write(1, WHITE_POWER_KKK, strlen(WHITE_POWER_KKK));
+    } else {
+        if(dataPointer[8] == 'b') {
+            write(1, BLACK_POWER, strlen(BLACK_POWER));
+        } else {
+            write(1, TIE, strlen(TIE));
+        }
     }
     write(1,"GAME OVER\n", strlen("GAME OVER\n"));
     RemoveSharedMemmory(dataPointer, shmid);

@@ -76,7 +76,7 @@ int PiecesCount(int player);
 
 void PrintGameBoard();
 
-int IsValidInput(char *inp);
+int IsValidInput(int row, int col);
 
 int TranslateToPlayerID(char turn);
 
@@ -87,16 +87,8 @@ int main(int argc, char *argv[]) {
     pid_t myPid;
     InitGameBoard();
     int row, col;
+    int rowInput,colInput;
     int flagFull = 1;
-    for (row = 0; row < BOARDSIZE; row++) {
-        for (col = 0; col < BOARDSIZE; col++) {
-            gameBoard[row][col] = 2;
-        }
-    }
-    gameBoard[0][0] = 0;
-    gameBoard[2][0] = 1;
-    gameBoard[1][7] = 1;
-    gameBoard[0][7] = 0;
     //open fifo
     if ((fd_write = open("fifo_clientTOserver", O_RDWR)) < 0) {
         write(STDERR_FILENO, "failed to open fifo", strlen("failed to open fifo"));
@@ -132,8 +124,10 @@ int main(int argc, char *argv[]) {
     write(1, THE_BOARD_IS,strlen(THE_BOARD_IS));
     PrintGameBoard();
     if(playerID == 1) {
-        write(1, WAITING_FOR_THE_OTHER_PLAYER, strlen(WAITING_FOR_THE_OTHER_PLAYER));
-        while(dataPointer[0] == '\0');
+        while(dataPointer[0] == '\0') {
+            sleep(1);
+            write(1, WAITING_FOR_THE_OTHER_PLAYER, strlen(WAITING_FOR_THE_OTHER_PLAYER));
+        }
         playerMove.player = TranslateToPlayerID(dataPointer[0]);
         playerMove.row = dataPointer[2] - '0';
         playerMove.col = dataPointer[1] - '0';
@@ -145,9 +139,10 @@ int main(int argc, char *argv[]) {
     while (!shouldStop) {
         flag = 0;
         while (flag != 1) {
+
             write(1, PLEASE_CHOOSE_A_SQUARE, strlen(PLEASE_CHOOSE_A_SQUARE));
-            read(0, userInput, 10);
-            int validFlag = IsValidInput(userInput);
+            scanf("\n[%d,%d]",&colInput,&rowInput);
+            int validFlag = IsValidInput(rowInput, colInput);
             if (!validFlag) {
                 write(1, NO_SUCH_SQUARE, strlen(NO_SUCH_SQUARE));
                 write(1, PLEASE_CHOOSE_ANOTHER_SQUARE, strlen(PLEASE_CHOOSE_ANOTHER_SQUARE));
@@ -155,8 +150,8 @@ int main(int argc, char *argv[]) {
                 continue;
             } else {
                 playerMove.player = playerID;
-                playerMove.row = userInput[3] - '0';
-                playerMove.col = userInput[1] - '0';
+                playerMove.row = rowInput;
+                playerMove.col = colInput;
                 validFlag = MoveValidChecker(&playerMove);
                 if (!validFlag) {
                     write(1, THIS_SQUARE_IS_INVALID, strlen(THIS_SQUARE_IS_INVALID));
@@ -171,10 +166,10 @@ int main(int argc, char *argv[]) {
         write(1, THE_BOARD_IS,strlen(THE_BOARD_IS));
         PrintGameBoard();
         dataPointer[3] = '\0';
-        dataPointer[2] = userInput[3];
-        dataPointer[1] = userInput[1];
+        dataPointer[2] = rowInput + '0';
+        dataPointer[1] = colInput + '0';
         dataPointer[0] = FromPlayerToChar(playerID);
-        HandleGameOver(playerID);
+        HandleGameOver(GetEnemy(playerID));
         while (1) {
             sleep(1);
             write(1, WAITING_FOR_THE_OTHER_PLAYER, strlen(WAITING_FOR_THE_OTHER_PLAYER));
@@ -190,6 +185,18 @@ int main(int argc, char *argv[]) {
                 write(1, THE_BOARD_IS, strlen(THE_BOARD_IS));
                 PrintGameBoard();
                 break;
+            }
+            if(dataPointer[8] != 0) {
+                if(dataPointer[8] == 'w') {
+                    write(1, WHITE_POWER_KKK, strlen(WHITE_POWER_KKK));
+                } else {
+                    if(dataPointer[8] == 'b') {
+                        write(1, BLACK_POWER, strlen(BLACK_POWER));
+                    } else {
+                        write(1, TIE, strlen(TIE));
+                    }
+                }
+                exit(1);
             }
         }
     }
@@ -278,7 +285,6 @@ void HandleGameOver(int player) {
                 dataPointer[8] = 'b';
                 exit(1);
             }
-                break;
         }
     } else if (flag == -1) {
         switch (myColor) {
@@ -350,18 +356,12 @@ void PrintGameBoard() {
  * @param inp the input string.
  * @return  1 for valid , 0 for unvalid.
  */
-int IsValidInput(char *inp) {
-    if (inp[0] != '[' || inp[2] != ',' || inp[4] != ']') {
-        return 0;
-    } else {
-        int row = inp[1] - '0';
-        int col = inp[3] - '0';
+int IsValidInput(int row, int col) {
         if (row < 0 || row > 7 || col < 0 || col > 7) {
             return 0;
         } else {
             return 1;
         }
-    }
 }
 
 /**
@@ -380,6 +380,16 @@ int IsGameOver(int player) {
                 flagFull = 0;
                 break;
             }
+        }
+    }
+    if(flagFull) {
+        if (enemyPiecesCount > myPiecesCount) {
+            return -1;
+        } else if (myPiecesCount > enemyPiecesCount) {
+            return 1;
+
+        } else {
+            return 2;
         }
     }
     int isAllBlack = 1;
@@ -411,7 +421,7 @@ int IsGameOver(int player) {
     }
    // return 0;
     PlayerMove tempMovement;
-    tempMovement.player = GetEnemy(player);
+    tempMovement.player = player;
     for (row = 0; row < BOARDSIZE; row++) {
         for (col = 0; col < BOARDSIZE; col++) {
             if (gameBoard[row][col] == 0) {
@@ -514,7 +524,7 @@ void DoMove(PlayerMove *pMovement) {
             tempCol--;
         }
         GetDownLeftDiagonal(&tempRow, &tempCol, pMovement);
-        while (tempRow >= 0 && tempCol >= 0 && tempRow < pMovement->row && tempCol > pMovement->col) {
+        while (tempRow >= 0 && tempCol >= 0 && tempRow > pMovement->row && tempCol < pMovement->col) {
             gameBoard[tempRow][tempCol] = pMovement->player;
             tempRow--;
             tempCol++;
@@ -912,7 +922,7 @@ int PlacementValidChecker(PlayerMove *pMovement) {
     //Down left diagonal
     flag = 0;
     isBetweenFlag = 0;
-    tempLine = pMovement->row - 1;
+    tempLine = pMovement->row + 1;
     tempColum = pMovement->col - 1;
     while (tempLine < BOARDSIZE && tempColum >= 0) {
         if (gameBoard[tempLine][tempColum] == enemy) {
