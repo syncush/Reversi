@@ -22,7 +22,7 @@
 #define THE_BOARD_IS "The board is:\n"
 #define WAITING_FOR_THE_OTHER_PLAYER "Waiting for the other player to make a move\n"
 #define BLACK_POWER "Winning player: Black\n"
-#define WHITE_POWER_KKK "Winning player: White\n"
+#define WHITE_WINS "Winning player: White\n"
 #define TIE "No winning player\n"
 #define BOARDSIZE 8
 
@@ -188,7 +188,7 @@ int main(int argc, char *argv[]) {
             }
             if(dataPointer[8] != 0) {
                 if(dataPointer[8] == 'w') {
-                    write(1, WHITE_POWER_KKK, strlen(WHITE_POWER_KKK));
+                    write(1, WHITE_WINS, strlen(WHITE_WINS));
                 } else {
                     if(dataPointer[8] == 'b') {
                         write(1, BLACK_POWER, strlen(BLACK_POWER));
@@ -276,7 +276,7 @@ void HandleGameOver(int player) {
     if (flag == 1) {
         switch (myColor) {
             case 1: {
-                write(1, WHITE_POWER_KKK, strlen(WHITE_POWER_KKK));
+                write(1, WHITE_WINS, strlen(WHITE_WINS));
                 dataPointer[8] = 'w';
                 exit(1);
             }
@@ -295,7 +295,7 @@ void HandleGameOver(int player) {
             }
                 break;
             case 2: {
-                write(1, WHITE_POWER_KKK, strlen(WHITE_POWER_KKK));
+                write(1, WHITE_WINS, strlen(WHITE_WINS));
                 dataPointer[8] = 'w';
                 exit(1);
             }

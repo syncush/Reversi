@@ -21,7 +21,7 @@
 #define BOARDSIZE 8
 #define KILOBYTE 1024
 #define BLACK_POWER "Winning player: Black\n"
-#define WHITE_POWER_KKK "Winning player: White\n"
+#define WHITE_WINS "Winning player: White\n"
 #define TIE "No winning player\n"
 
 char fifoID[1024] = {0};
@@ -86,13 +86,11 @@ void RemoveSharedMemmory(char *pointer, int shmid);
 int main() {
     memSizeOfBoard = sizeof(gameBoard[0][0]) * BOARDSIZE * BOARDSIZE;
     InitGameBoard();
-    pid_t firstPlayer;
-    pid_t secondPlayer;
+    pid_t firstGivenPid=0,secondGivenPid = 0;
     int fifoDescriptor = 0;
     int shmid;
     char *dataPointer = 0;
     key_t key;
-    PlayerMove playerMove;
     strcpy(fifoID, "fifo_clientTOserver");
     CreateKey(&key, "ex31.c", 'k');
     //CreateSharedMemmoryBlock(&key, &shmid, dataPointer);
@@ -133,14 +131,16 @@ int main() {
         perror("Unable to open a fifo");
         exit(-1);
     }
-    pid_t firstGivenPid=0,secondGivenPid = 0;
+
     //get the pid's
     if (read(fd_read, &firstGivenPid, sizeof(pid_t)) < 0) {
 
-        //todo handle
+        write(1,"Failed to read first player pid", strlen("Failed to read first player pid"));
+        exit(1);
     }
     if (read(fd_read, &secondGivenPid, sizeof(pid_t)) < 0) {
-        //todo handle
+        write(1,"Failed to read second player pid", strlen("Failed to read second player pid"));
+        exit(1);
     }
     ReleaseFifo(&fifoDescriptor);
     memset(dataPointer, 0, KILOBYTE);
@@ -149,10 +149,9 @@ int main() {
     kill(secondGivenPid, SIGUSR1);
     while(dataPointer[8] == 0) {
         sleep(2);
-
     }
     if(dataPointer[8] == 'w') {
-        write(1, WHITE_POWER_KKK, strlen(WHITE_POWER_KKK));
+        write(1, WHITE_WINS, strlen(WHITE_WINS));
     } else {
         if(dataPointer[8] == 'b') {
             write(1, BLACK_POWER, strlen(BLACK_POWER));
