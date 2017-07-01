@@ -1,5 +1,5 @@
 /************************************************************
- *                          Ex31.c
+ *                          Ex32.c
  *                  Name:   Daniel Hermon
  *                  I.D     209028778
  *                  Group:  03
@@ -88,6 +88,7 @@ int main(int argc, char *argv[]) {
     InitGameBoard();
     int row, col;
     int rowInput,colInput;
+    int printFlag = 1;
     int flagFull = 1;
     //open fifo
     if ((fd_write = open("fifo_clientTOserver", O_RDWR)) < 0) {
@@ -121,6 +122,8 @@ int main(int argc, char *argv[]) {
     PlayerMove playerMove;
     int shouldStop = 0;
     int enemy = GetEnemy(playerID);
+    char chRow;
+    char chCol;
     write(1, THE_BOARD_IS,strlen(THE_BOARD_IS));
     PrintGameBoard();
     if(playerID == 1) {
@@ -139,35 +142,41 @@ int main(int argc, char *argv[]) {
     while (!shouldStop) {
         flag = 0;
         while (flag != 1) {
-
-            write(1, PLEASE_CHOOSE_A_SQUARE, strlen(PLEASE_CHOOSE_A_SQUARE));
-            scanf("\n[%d,%d]",&colInput,&rowInput);
-            int validFlag = IsValidInput(rowInput, colInput);
+            if(printFlag) {
+                write(1, PLEASE_CHOOSE_A_SQUARE, strlen(PLEASE_CHOOSE_A_SQUARE));
+            } else {
+                write(1, PLEASE_CHOOSE_ANOTHER_SQUARE, strlen(PLEASE_CHOOSE_ANOTHER_SQUARE));
+            }
+            char input[10] = { 0 };
+            read(0, input, 10);
+            int validFlag = IsValidInput(input[3] - '0', input[1] - '0');
             if (!validFlag) {
                 write(1, NO_SUCH_SQUARE, strlen(NO_SUCH_SQUARE));
-                write(1, PLEASE_CHOOSE_ANOTHER_SQUARE, strlen(PLEASE_CHOOSE_ANOTHER_SQUARE));
+                printFlag = 0;
                 flag = 0;
                 continue;
             } else {
                 playerMove.player = playerID;
-                playerMove.row = rowInput;
-                playerMove.col = colInput;
+                playerMove.row = input[3] - '0';
+                playerMove.col = input[1] - '0';
+                chRow = input[3];
+                chCol = input[1];
                 validFlag = MoveValidChecker(&playerMove);
                 if (!validFlag) {
                     write(1, THIS_SQUARE_IS_INVALID, strlen(THIS_SQUARE_IS_INVALID));
-                    write(1, PLEASE_CHOOSE_ANOTHER_SQUARE, strlen(PLEASE_CHOOSE_ANOTHER_SQUARE));
+                    printFlag = 0;
                     flag = 0;
                     continue;
                 }
-                flag = 1;
             }
+            flag = 1;
         }
         DoMove(&playerMove);
         write(1, THE_BOARD_IS,strlen(THE_BOARD_IS));
         PrintGameBoard();
         dataPointer[3] = '\0';
-        dataPointer[2] = rowInput + '0';
-        dataPointer[1] = colInput + '0';
+        dataPointer[2] = chRow;
+        dataPointer[1] = chCol;
         dataPointer[0] = FromPlayerToChar(playerID);
         HandleGameOver(GetEnemy(playerID));
         while (1) {
@@ -214,7 +223,7 @@ void InitGameBoard() {
 }
 
 /**
- *
+ * The function connects to the shared memmory to start playing against the other player
  * @param sig
  */
 void ConnectSHM_SIGUSR1(int sig) {
@@ -267,8 +276,8 @@ char FromPlayerToChar(int player) {
 }
 
 /**
- *
- * @param player
+ * Function checks if the game is over. if so print the right message and quits.
+ * @param player the current player checking if the game is over.
  */
 void HandleGameOver(int player) {
     int flag = IsGameOver(player);
@@ -277,11 +286,13 @@ void HandleGameOver(int player) {
         switch (myColor) {
             case 1: {
                 write(1, WHITE_WINS, strlen(WHITE_WINS));
+                //Notify win
                 dataPointer[8] = 'w';
                 exit(1);
             }
             case 2: {
                 write(1, BLACK_POWER, strlen(BLACK_POWER));
+                //Notify win
                 dataPointer[8] = 'b';
                 exit(1);
             }
@@ -290,12 +301,14 @@ void HandleGameOver(int player) {
         switch (myColor) {
             case 1: {
                 write(1, BLACK_POWER, strlen(BLACK_POWER));
+                //Notify win
                 dataPointer[8] = 'b';
                 exit(1);
             }
                 break;
             case 2: {
                 write(1, WHITE_WINS, strlen(WHITE_WINS));
+                //Notify win
                 dataPointer[8] = 'w';
                 exit(1);
             }
@@ -305,6 +318,7 @@ void HandleGameOver(int player) {
     } else {
         if (flag == 2) {
             write(1, TIE, strlen(TIE));
+            //Notify tie
             dataPointer[8] = 't';
             exit(1);
         }
@@ -434,6 +448,7 @@ int IsGameOver(int player) {
             }
         }
     }
+    //Game is finished now check the pieces count to see who won .
         if (enemyPiecesCount > myPiecesCount) {
             return -1;
         } else if (myPiecesCount > enemyPiecesCount) {
